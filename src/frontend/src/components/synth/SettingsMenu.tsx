@@ -167,6 +167,7 @@ export default function SettingsMenu({ onClose }: Props) {
           SETTINGS
         </span>
         <button
+          type="button"
           className="synth-btn"
           onClick={onClose}
           style={{ padding: "3px 8px" }}
@@ -196,10 +197,20 @@ export default function SettingsMenu({ onClose }: Props) {
       <div className="panel-section">
         <div className="panel-section-title">GLOBAL</div>
         <div className="toggle-row">
-          <label>Tempo Sync (scan speed follows BPM)</label>
+          <label htmlFor="settings-tempo-sync">
+            Tempo Sync (scan speed follows BPM)
+          </label>
           <div
+            id="settings-tempo-sync"
+            role="switch"
+            aria-checked={state.tempoSyncEnabled}
+            tabIndex={0}
             className={`synth-toggle${state.tempoSyncEnabled ? " on" : ""}`}
             onClick={() => state.setTempoSyncEnabled(!state.tempoSyncEnabled)}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter")
+                state.setTempoSyncEnabled(!state.tempoSyncEnabled);
+            }}
           />
         </div>
       </div>
@@ -208,6 +219,7 @@ export default function SettingsMenu({ onClose }: Props) {
       <div className="panel-section">
         <div className="panel-section-title">EXPORT</div>
         <button
+          type="button"
           data-ocid="settings.export_button"
           className="synth-btn"
           onClick={handleExportWav}
@@ -239,6 +251,7 @@ export default function SettingsMenu({ onClose }: Props) {
             }}
           />
           <button
+            type="button"
             data-ocid="settings.save_preset_button"
             className="synth-btn"
             onClick={handleSavePreset}
@@ -250,6 +263,7 @@ export default function SettingsMenu({ onClose }: Props) {
         </div>
 
         <button
+          type="button"
           className="synth-btn"
           onClick={loadPresets}
           style={{ width: "100%", marginBottom: "4px" }}
@@ -282,6 +296,7 @@ export default function SettingsMenu({ onClose }: Props) {
                   {preset.name}
                 </span>
                 <button
+                  type="button"
                   className="synth-btn"
                   style={{ padding: "2px 6px", fontSize: "9px" }}
                   onClick={() => handleLoadPreset(preset.name)}
@@ -289,6 +304,7 @@ export default function SettingsMenu({ onClose }: Props) {
                   LOAD
                 </button>
                 <button
+                  type="button"
                   className="synth-btn danger"
                   style={{ padding: "2px 6px", fontSize: "9px" }}
                   onClick={() => handleDeletePreset(preset.name)}
@@ -316,6 +332,7 @@ export default function SettingsMenu({ onClose }: Props) {
       {/* Reset All */}
       <div className="panel-section">
         <button
+          type="button"
           data-ocid="settings.reset_button"
           className="synth-btn danger"
           onClick={handleResetAll}

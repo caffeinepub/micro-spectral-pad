@@ -188,6 +188,8 @@ export interface SynthState {
   activePanel: ActivePanel;
   currentChordName: string;
   tempoSyncEnabled: boolean;
+  triggerMode: "auto" | "manual" | "midi";
+  retriggerEnvelopes: boolean;
 
   // Actions
   setIsPlaying: (v: boolean) => void;
@@ -301,6 +303,8 @@ export interface SynthState {
   setActivePanel: (v: ActivePanel) => void;
   setCurrentChordName: (v: string) => void;
   setTempoSyncEnabled: (v: boolean) => void;
+  setTriggerMode: (v: "auto" | "manual" | "midi") => void;
+  setRetriggerEnvelopes: (v: boolean) => void;
 }
 
 // Default just intonation ratios
@@ -467,6 +471,8 @@ export const useSynthStore = create<SynthState>((set) => ({
   activePanel: null,
   currentChordName: "Cmaj",
   tempoSyncEnabled: false,
+  triggerMode: "auto",
+  retriggerEnvelopes: false,
 
   // Actions - simple setters
   setIsPlaying: (v) => set({ isPlaying: v }),
@@ -580,4 +586,6 @@ export const useSynthStore = create<SynthState>((set) => ({
   setActivePanel: (v) => set({ activePanel: v }),
   setCurrentChordName: (v) => set({ currentChordName: v }),
   setTempoSyncEnabled: (v) => set({ tempoSyncEnabled: v }),
+  setTriggerMode: (v) => set({ triggerMode: v }),
+  setRetriggerEnvelopes: (v) => set({ retriggerEnvelopes: v }),
 }));

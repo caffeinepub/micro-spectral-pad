@@ -291,9 +291,14 @@ export function stopRenderLoop() {
 }
 
 export function resizeCanvas(width: number, height: number) {
-  if (!canvas || !ctx) return;
+  if (!canvas) return;
   canvas.width = width;
   canvas.height = height;
+  // Re-acquire context in case it was lost
+  if (!ctx) {
+    ctx = canvas.getContext("2d", { alpha: false });
+  }
+  if (!ctx) return;
   computeGeometry();
   drawGridBackground();
   drawFrequencyLabels();

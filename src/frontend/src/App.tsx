@@ -69,6 +69,7 @@ export default function App() {
       }}
       onTouchStart={handleFirstTouch}
       onClick={handleFirstTouch}
+      onKeyDown={handleFirstTouch}
     >
       <TopBar />
 
@@ -89,31 +90,66 @@ export default function App() {
       {/* Overlays */}
       {activePanel === "brush" && (
         <>
-          <div className="overlay-backdrop" onClick={closePanel} />
+          <div
+            className="overlay-backdrop"
+            onClick={closePanel}
+            onKeyDown={closePanel}
+            role="button"
+            tabIndex={0}
+            aria-label="Close panel"
+          />
           <BrushPopup onClose={closePanel} />
         </>
       )}
       {activePanel === "sound" && (
         <>
-          <div className="overlay-backdrop" onClick={closePanel} />
+          <div
+            className="overlay-backdrop"
+            onClick={closePanel}
+            onKeyDown={closePanel}
+            role="button"
+            tabIndex={0}
+            aria-label="Close panel"
+          />
           <SoundPanel onClose={closePanel} />
         </>
       )}
       {activePanel === "modules" && (
         <>
-          <div className="overlay-backdrop" onClick={closePanel} />
+          <div
+            className="overlay-backdrop"
+            onClick={closePanel}
+            onKeyDown={closePanel}
+            role="button"
+            tabIndex={0}
+            aria-label="Close panel"
+          />
           <ModulesPanel onClose={closePanel} />
         </>
       )}
       {activePanel === "chord" && (
         <>
-          <div className="overlay-backdrop" onClick={closePanel} />
+          <div
+            className="overlay-backdrop"
+            onClick={closePanel}
+            onKeyDown={closePanel}
+            role="button"
+            tabIndex={0}
+            aria-label="Close panel"
+          />
           <ChordPanel onClose={closePanel} />
         </>
       )}
       {activePanel === "settings" && (
         <>
-          <div className="overlay-backdrop" onClick={closePanel} />
+          <div
+            className="overlay-backdrop"
+            onClick={closePanel}
+            onKeyDown={closePanel}
+            role="button"
+            tabIndex={0}
+            aria-label="Close panel"
+          />
           <SettingsMenu onClose={closePanel} />
         </>
       )}

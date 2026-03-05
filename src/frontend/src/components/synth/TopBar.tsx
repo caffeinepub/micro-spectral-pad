@@ -94,6 +94,7 @@ export default function TopBar() {
     >
       {/* Play/Pause */}
       <button
+        type="button"
         data-ocid="topbar.play_toggle"
         className={`synth-btn${isPlaying ? " active" : ""}`}
         onClick={handlePlayPause}
@@ -105,6 +106,7 @@ export default function TopBar() {
 
       {/* Stop */}
       <button
+        type="button"
         data-ocid="topbar.stop_button"
         className="synth-btn"
         onClick={handleStop}
@@ -153,6 +155,7 @@ export default function TopBar() {
           }}
         />
         <button
+          type="button"
           data-ocid="topbar.tap_tempo_button"
           className="synth-btn"
           onClick={handleTapTempo}
@@ -180,6 +183,7 @@ export default function TopBar() {
 
       {/* Safe Mode toggle */}
       <button
+        type="button"
         data-ocid="topbar.safe_mode_toggle"
         className={`synth-btn${performanceSafeMode ? " active" : ""}`}
         onClick={() => setPerformanceSafeMode(!performanceSafeMode)}
@@ -191,6 +195,7 @@ export default function TopBar() {
 
       {/* Master Bypass */}
       <button
+        type="button"
         data-ocid="topbar.bypass_toggle"
         className={`synth-btn${masterBypass ? " active" : ""}`}
         onClick={() => setMasterBypass(!masterBypass)}
@@ -207,6 +212,7 @@ export default function TopBar() {
 
       {/* Panic */}
       <button
+        type="button"
         data-ocid="topbar.panic_button"
         className="synth-btn danger"
         onClick={handlePanic}
@@ -218,6 +224,7 @@ export default function TopBar() {
 
       {/* Settings */}
       <button
+        type="button"
         data-ocid="topbar.settings_button"
         className={`synth-btn${activePanel === "settings" ? " active" : ""}`}
         onClick={handleSettings}

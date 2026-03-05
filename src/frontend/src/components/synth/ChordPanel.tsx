@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { clearGrid } from "../../engines/brushEngine";
 import {
   CHORD_INTERVALS,
   PROGRESSIONS,
@@ -32,10 +33,12 @@ function SliderRow({
   onChange: (v: number) => void;
   displayFn?: (v: number) => string;
 }) {
+  const inputId = `chord-slider-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="synth-slider-row">
-      <label>{label}</label>
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type="range"
         min={min}
         max={max}
@@ -59,14 +62,25 @@ function ToggleRow({
   value,
   onChange,
 }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  const toggleId = `toggle-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="toggle-row">
-      <label>{label}</label>
+      <label htmlFor={toggleId}>{label}</label>
       <div
+        id={toggleId}
+        role="switch"
+        aria-checked={value}
+        tabIndex={0}
         className={`synth-toggle${value ? " on" : ""}`}
         onClick={() => {
           onChange(!value);
           syncParamsToAudio();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            onChange(!value);
+            syncParamsToAudio();
+          }
         }}
       />
     </div>
@@ -102,7 +116,7 @@ function MiniKeyboard({ activeNotes }: { activeNotes: number[] }) {
         const isActive = activeSet.has(noteOff % 12);
         return (
           <div
-            key={i}
+            key={`wk-${noteOff}`}
             style={{
               position: "absolute",
               left: `${(i / whiteKeys.length) * 100}%`,
@@ -235,11 +249,20 @@ export default function ChordPanel({ onClose }: Props) {
             CHORD MODE
           </span>
           <div
+            role="switch"
+            aria-checked={state.chordModeEnabled}
+            tabIndex={0}
             data-ocid="chord.enable_toggle"
             className={`synth-toggle${state.chordModeEnabled ? " on" : ""}`}
             onClick={() => {
               state.setChordModeEnabled(!state.chordModeEnabled);
               syncParamsToAudio();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                state.setChordModeEnabled(!state.chordModeEnabled);
+                syncParamsToAudio();
+              }
             }}
           />
         </div>
@@ -259,13 +282,19 @@ export default function ChordPanel({ onClose }: Props) {
             {chordName}
           </div>
           <button
+            type="button"
             className="synth-btn danger"
-            onClick={() => {}}
+            data-ocid="chord.all_off_button"
+            onClick={() => {
+              clearGrid();
+              state.setProgressionStep(0);
+            }}
             style={{ padding: "4px 8px" }}
           >
             ALL OFF
           </button>
           <button
+            type="button"
             className="synth-btn"
             onClick={onClose}
             style={{ padding: "3px 8px" }}
@@ -274,6 +303,29 @@ export default function ChordPanel({ onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Chord Lock Active Indicator */}
+      {state.chordModeEnabled && (
+        <div
+          data-ocid="chord.lock_active_indicator"
+          style={{
+            padding: "5px 10px",
+            marginBottom: "8px",
+            background:
+              "color-mix(in oklch, var(--synth-active) 18%, var(--synth-control))",
+            border: "1px solid var(--synth-active)",
+            borderRadius: "4px",
+            color: "var(--synth-active)",
+            fontSize: "9px",
+            fontWeight: "bold",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            textAlign: "center",
+          }}
+        >
+          🔒 CHORD LOCK ACTIVE — Brush snaps to chord tones
+        </div>
+      )}
 
       {/* Mini Keyboard */}
       <MiniKeyboard activeNotes={activeNotes} />
@@ -291,6 +343,7 @@ export default function ChordPanel({ onClose }: Props) {
         >
           {ROOT_NOTE_OPTIONS.map((note) => (
             <button
+              type="button"
               key={note}
               data-ocid="chord.root_select"
               className={`synth-btn${state.chordRoot === note ? " active" : ""}`}
@@ -355,6 +408,7 @@ export default function ChordPanel({ onClose }: Props) {
             onChange={state.setChordLockRoot}
           />
           <button
+            type="button"
             className="synth-btn"
             style={{ padding: "3px 8px", fontSize: "9px" }}
             onClick={() => {
@@ -475,10 +529,19 @@ export default function ChordPanel({ onClose }: Props) {
             PROGRESSION
           </div>
           <div
+            role="switch"
+            aria-checked={state.progressionEnabled}
+            tabIndex={0}
             className={`synth-toggle${state.progressionEnabled ? " on" : ""}`}
             onClick={() => {
               state.setProgressionEnabled(!state.progressionEnabled);
               syncParamsToAudio();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                state.setProgressionEnabled(!state.progressionEnabled);
+                syncParamsToAudio();
+              }
             }}
           />
         </div>
@@ -502,7 +565,7 @@ export default function ChordPanel({ onClose }: Props) {
           <div style={{ display: "flex", gap: "3px", marginBottom: "6px" }}>
             {progressionChords.map((chord, i) => (
               <div
-                key={i}
+                key={`prog-${i}-${chord}`}
                 style={{
                   flex: 1,
                   padding: "4px 2px",
@@ -567,6 +630,7 @@ export default function ChordPanel({ onClose }: Props) {
           }}
         >
           <button
+            type="button"
             data-ocid="chord.prev_button"
             className="synth-btn"
             style={{ flex: 1 }}
@@ -577,6 +641,7 @@ export default function ChordPanel({ onClose }: Props) {
             ◀ PREV
           </button>
           <button
+            type="button"
             data-ocid="chord.next_button"
             className="synth-btn"
             style={{ flex: 1 }}
@@ -589,6 +654,7 @@ export default function ChordPanel({ onClose }: Props) {
             NEXT ▶
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -602,6 +668,7 @@ export default function ChordPanel({ onClose }: Props) {
             RAND
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => state.setProgressionStep(0)}
@@ -626,18 +693,36 @@ export default function ChordPanel({ onClose }: Props) {
         <div className="panel-section-title">TIMING & TRIGGER</div>
         <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
           <div style={{ flex: 1 }}>
-            <ToggleRow label="Sync To BPM" value={false} onChange={() => {}} />
+            <ToggleRow
+              label="Sync To BPM"
+              value={state.tempoSyncEnabled}
+              onChange={(v) => {
+                state.setTempoSyncEnabled(v);
+                syncParamsToAudio();
+              }}
+            />
           </div>
         </div>
-        <select style={{ width: "100%", marginBottom: "6px" }}>
-          <option>Auto Advance</option>
-          <option>Manual Advance</option>
-          <option>MIDI Trigger</option>
+        <select
+          data-ocid="chord.trigger_mode_select"
+          value={state.triggerMode}
+          onChange={(e) => {
+            state.setTriggerMode(e.target.value as "auto" | "manual" | "midi");
+            syncParamsToAudio();
+          }}
+          style={{ width: "100%", marginBottom: "6px" }}
+        >
+          <option value="auto">Auto Advance</option>
+          <option value="manual">Manual Advance</option>
+          <option value="midi">MIDI Trigger</option>
         </select>
         <ToggleRow
           label="Retrigger Envelopes On Change"
-          value={false}
-          onChange={() => {}}
+          value={state.retriggerEnvelopes}
+          onChange={(v) => {
+            state.setRetriggerEnvelopes(v);
+            syncParamsToAudio();
+          }}
         />
         <SliderRow
           label="STRUM SPD"

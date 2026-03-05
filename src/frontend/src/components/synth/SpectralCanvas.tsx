@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
-import { scheduleRebuild } from "../../engines/audioEngine";
+import {
+  getPlayheadFraction,
+  scheduleRebuild,
+} from "../../engines/audioEngine";
 import {
   applyBrush,
   applyMutation,
@@ -8,6 +11,7 @@ import {
 } from "../../engines/brushEngine";
 import {
   canvasToCellCoords,
+  freqToRow,
   initCanvas,
   redrawAll,
   resizeCanvas,
@@ -15,7 +19,12 @@ import {
   startRenderLoop,
   stopRenderLoop,
 } from "../../engines/canvasEngine";
-import { freqToRow } from "../../engines/canvasEngine";
+import {
+  PROGRESSIONS,
+  ROOT_NOTES,
+  SCALE_INTERVALS,
+  getChordRowsForGrid,
+} from "../../engines/chordEngine";
 import { COLS, ROWS, useSynthStore } from "../../store/synthStore";
 
 const FREQ_LABELS = [
@@ -50,6 +59,18 @@ export default function SpectralCanvas() {
     mutationType,
     mutateStrength,
     previewMode,
+    chordModeEnabled,
+    chordRoot,
+    chordOctave,
+    chordType,
+    chordInversion,
+    chordSpread,
+    chordVoiceCount,
+    chordVoiceStacking,
+    progressionEnabled,
+    progressionPreset,
+    progressionStep,
+    chordScale,
   } = useSynthStore();
 
   // Initialize canvas
@@ -58,16 +79,20 @@ export default function SpectralCanvas() {
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const resize = () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      resizeCanvas(w, h);
-    };
-
-    resize();
+    // Must init canvas (get 2D context) BEFORE resizing
+    const w = container.clientWidth || 300;
+    const h = container.clientHeight || 200;
+    canvas.width = w;
+    canvas.height = h;
     initCanvas(canvas);
     redrawAll();
     startRenderLoop();
+
+    const resize = () => {
+      const w2 = container.clientWidth;
+      const h2 = container.clientHeight;
+      if (w2 > 0 && h2 > 0) resizeCanvas(w2, h2);
+    };
 
     const observer = new ResizeObserver(resize);
     observer.observe(container);
@@ -80,8 +105,6 @@ export default function SpectralCanvas() {
 
   // Playhead animation
   useEffect(() => {
-    const { getPlayheadFraction } = require("../../engines/audioEngine");
-
     const animatePlayhead = () => {
       playheadRafRef.current = requestAnimationFrame(animatePlayhead);
       const fraction = getPlayheadFraction();
@@ -126,7 +149,61 @@ export default function SpectralCanvas() {
     (x: number, y: number, isMutateEnd = false) => {
       const coords = canvasToCellCoords(x, y);
       if (!coords) return;
-      const { col, row } = coords;
+      let { col, row } = coords;
+
+      // Chord lock: snap row to nearest allowed chord tone row
+      if (chordModeEnabled) {
+        // If progression is active, derive current step's root note
+        let effectiveRoot = chordRoot;
+        if (progressionEnabled) {
+          const prog = PROGRESSIONS[progressionPreset] || [0, 3, 4, 0];
+          const scale = SCALE_INTERVALS[chordScale] || SCALE_INTERVALS.Major;
+          const rootMidi = ROOT_NOTES[chordRoot] || 60;
+          const ROOT_NOTE_NAMES = [
+            "C",
+            "C#",
+            "D",
+            "D#",
+            "E",
+            "F",
+            "F#",
+            "G",
+            "G#",
+            "A",
+            "A#",
+            "B",
+          ];
+          const degree = prog[progressionStep % prog.length] ?? 0;
+          const semitone = scale[degree % scale.length] ?? 0;
+          const noteIndex = (((rootMidi - 60 + semitone) % 12) + 12) % 12;
+          effectiveRoot = ROOT_NOTE_NAMES[noteIndex] ?? chordRoot;
+        }
+
+        const allowedRows = getChordRowsForGrid(
+          effectiveRoot,
+          chordOctave,
+          chordType,
+          chordInversion,
+          chordSpread,
+          chordVoiceCount,
+          chordVoiceStacking,
+          ROWS,
+        );
+
+        if (allowedRows.size > 0 && !allowedRows.has(row)) {
+          // Snap to nearest allowed row
+          let nearest = -1;
+          let minDist = Number.POSITIVE_INFINITY;
+          for (const r of allowedRows) {
+            const d = Math.abs(r - row);
+            if (d < minDist) {
+              minDist = d;
+              nearest = r;
+            }
+          }
+          if (nearest >= 0) row = nearest;
+        }
+      }
 
       // Skip if same cell (avoid redundant writes during slow drag)
       if (
@@ -167,6 +244,18 @@ export default function SpectralCanvas() {
       mutateMode,
       mutationType,
       mutateStrength,
+      chordModeEnabled,
+      chordRoot,
+      chordOctave,
+      chordType,
+      chordInversion,
+      chordSpread,
+      chordVoiceCount,
+      chordVoiceStacking,
+      progressionEnabled,
+      progressionPreset,
+      progressionStep,
+      chordScale,
     ],
   );
 
@@ -287,7 +376,6 @@ export default function SpectralCanvas() {
   void previewMode;
   void clearGrid;
   void COLS;
-  void ROWS;
   void freqToRow;
   void FREQ_LABELS;
 

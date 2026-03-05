@@ -65,6 +65,8 @@ function Knob({
         width="40"
         height="40"
         viewBox="0 0 40 40"
+        aria-label={label}
+        role="img"
         onMouseDown={(e) => {
           handleDragStart(e.clientY);
           e.preventDefault();
@@ -255,6 +257,7 @@ export default function MacroPanel() {
         }}
       >
         <button
+          type="button"
           className="synth-btn"
           onClick={handleRandomize}
           style={{ padding: "3px 6px", fontSize: "9px" }}
@@ -263,6 +266,7 @@ export default function MacroPanel() {
           RND
         </button>
         <button
+          type="button"
           className="synth-btn"
           onClick={handleReset}
           style={{ padding: "3px 6px", fontSize: "9px" }}

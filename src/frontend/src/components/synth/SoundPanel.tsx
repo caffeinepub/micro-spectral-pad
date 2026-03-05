@@ -23,10 +23,12 @@ function SliderRow({
   dataOcid,
   displayFn,
 }: SliderRowProps) {
+  const inputId = `snd-slider-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="synth-slider-row">
-      <label>{label}</label>
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type="range"
         min={min}
         max={max}
@@ -53,14 +55,25 @@ interface ToggleRowProps {
 }
 
 function ToggleRow({ label, value, onChange }: ToggleRowProps) {
+  const toggleId = `snd-toggle-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="toggle-row">
-      <label>{label}</label>
+      <label htmlFor={toggleId}>{label}</label>
       <div
+        id={toggleId}
+        role="switch"
+        aria-checked={value}
+        tabIndex={0}
         className={`synth-toggle${value ? " on" : ""}`}
         onClick={() => {
           onChange(!value);
           syncParamsToAudio();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            onChange(!value);
+            syncParamsToAudio();
+          }
         }}
       />
     </div>
@@ -142,6 +155,7 @@ export default function SoundPanel({ onClose }: Props) {
           SOUND CONTROLS
         </span>
         <button
+          type="button"
           className="synth-btn"
           onClick={onClose}
           style={{ padding: "3px 8px" }}
@@ -255,6 +269,7 @@ export default function SoundPanel({ onClose }: Props) {
               onChange={setSubHarmonicEnabled}
             />
             <button
+              type="button"
               className="synth-btn"
               onClick={() => {
                 randomizePhases();
@@ -273,6 +288,7 @@ export default function SoundPanel({ onClose }: Props) {
             </div>
             <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
               <button
+                type="button"
                 className={`synth-btn${noiseColor === "white" ? " active" : ""}`}
                 onClick={() => {
                   setNoiseColor("white");
@@ -283,6 +299,7 @@ export default function SoundPanel({ onClose }: Props) {
                 WHITE
               </button>
               <button
+                type="button"
                 className={`synth-btn${noiseColor === "pink" ? " active" : ""}`}
                 onClick={() => {
                   setNoiseColor("pink");
@@ -333,6 +350,7 @@ export default function SoundPanel({ onClose }: Props) {
             <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
               {(["glass", "metal", "string"] as const).map((m) => (
                 <button
+                  type="button"
                   key={m}
                   className={`synth-btn${material === m ? " active" : ""}`}
                   onClick={() => {

@@ -45,10 +45,12 @@ function SliderRow({
   dataOcid?: string;
   displayFn?: (v: number) => string;
 }) {
+  const inputId = `slider-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="synth-slider-row">
-      <label>{label}</label>
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type="range"
         min={min}
         max={max}
@@ -122,6 +124,7 @@ export default function BrushPopup({ onClose }: Props) {
           {mutateMode ? "MUTATE BRUSH" : "BRUSH SELECT"}
         </span>
         <button
+          type="button"
           data-ocid="brush.close_button"
           className="synth-btn"
           onClick={onClose}
@@ -146,7 +149,8 @@ export default function BrushPopup({ onClose }: Props) {
             >
               {MUTATION_NAMES.map((name, i) => (
                 <button
-                  key={i}
+                  type="button"
+                  key={name}
                   className={`synth-btn${mutationType === i ? " active" : ""}`}
                   onClick={() => setMutationType(i as MutationType)}
                   style={{
@@ -182,7 +186,8 @@ export default function BrushPopup({ onClose }: Props) {
           >
             {BRUSH_NAMES.map((name, i) => (
               <button
-                key={i}
+                type="button"
+                key={BRUSH_FULL_NAMES[i]}
                 data-ocid={`brush.type_button.${i + 1}`}
                 className={`synth-btn${brushType === i ? " active" : ""}`}
                 onClick={() => setBrushType(i as BrushType)}
@@ -200,6 +205,7 @@ export default function BrushPopup({ onClose }: Props) {
             <div style={{ display: "flex", gap: "4px" }}>
               {[1, 2, 3].map((s) => (
                 <button
+                  type="button"
                   key={s}
                   data-ocid={`brush.size_button.${s}`}
                   className={`synth-btn${brushSize === s ? " active" : ""}`}
@@ -254,6 +260,12 @@ export default function BrushPopup({ onClose }: Props) {
           {/* Hue Gradient Selector */}
           <div style={{ marginBottom: "8px" }}>
             <div
+              role="slider"
+              aria-label="Hue selector"
+              aria-valuenow={Math.round(brushHueNorm * 360)}
+              aria-valuemin={0}
+              aria-valuemax={360}
+              tabIndex={0}
               style={{
                 height: "20px",
                 borderRadius: "3px",
@@ -267,6 +279,12 @@ export default function BrushPopup({ onClose }: Props) {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / rect.width;
                 setBrushHueNorm(Math.max(0, Math.min(1, x)));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowLeft")
+                  setBrushHueNorm(Math.max(0, brushHueNorm - 0.01));
+                if (e.key === "ArrowRight")
+                  setBrushHueNorm(Math.min(1, brushHueNorm + 0.01));
               }}
             >
               <div

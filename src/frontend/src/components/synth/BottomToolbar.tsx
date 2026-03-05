@@ -37,8 +37,29 @@ export default function BottomToolbar() {
     const idx = SOUND_MODES.indexOf(soundMode);
     const next = SOUND_MODES[(idx + 1) % SOUND_MODES.length];
     setSoundMode(next);
-    syncParamsImmediately();
+    // Force audio engine to read new mode immediately
+    setTimeout(() => syncParamsImmediately(), 10);
   }, [soundMode, setSoundMode]);
+
+  const handleOD = useCallback(() => {
+    // Full app reset
+    clearGrid();
+    const state = useSynthStore.getState();
+    state.setChordModeEnabled(false);
+    state.setProgressionEnabled(false);
+    state.setMutateMode(false);
+    state.setSoundMode("additive");
+    state.setMasterVolume(0.7);
+    state.setDriftEnabled(false);
+    state.setSeqEnabled(false);
+    state.setMasterBypass(false);
+    state.setPreviewMode(false);
+    state.setStereoMode(false);
+    state.setProgressionStep(0);
+    state.setActivePanel(null);
+    state.setHasUndo(false);
+    setTimeout(() => syncParamsImmediately(), 10);
+  }, []);
 
   const handleClear = useCallback(() => {
     clearGrid();
@@ -78,6 +99,7 @@ export default function BottomToolbar() {
     >
       {/* Sound Mode */}
       <button
+        type="button"
         data-ocid="toolbar.sound_mode_button"
         className="synth-btn active"
         onClick={handleSoundModeClick}
@@ -89,6 +111,7 @@ export default function BottomToolbar() {
 
       {/* Brush */}
       <button
+        type="button"
         data-ocid="toolbar.brush_button"
         className={`synth-btn${activePanel === "brush" ? " active" : ""}`}
         onClick={() => setActivePanel(activePanel === "brush" ? null : "brush")}
@@ -100,6 +123,7 @@ export default function BottomToolbar() {
 
       {/* Sound Panel */}
       <button
+        type="button"
         data-ocid="toolbar.sound_button"
         className={`synth-btn${activePanel === "sound" ? " active" : ""}`}
         onClick={() => setActivePanel(activePanel === "sound" ? null : "sound")}
@@ -111,6 +135,7 @@ export default function BottomToolbar() {
 
       {/* Modules Panel */}
       <button
+        type="button"
         data-ocid="toolbar.modules_button"
         className={`synth-btn${activePanel === "modules" ? " active" : ""}`}
         onClick={() =>
@@ -124,6 +149,7 @@ export default function BottomToolbar() {
 
       {/* Chord Panel */}
       <button
+        type="button"
         data-ocid="toolbar.chord_button"
         className={`synth-btn${activePanel === "chord" ? " active" : ""}`}
         onClick={() => setActivePanel(activePanel === "chord" ? null : "chord")}
@@ -137,6 +163,7 @@ export default function BottomToolbar() {
 
       {/* Clear */}
       <button
+        type="button"
         data-ocid="toolbar.clear_button"
         className="synth-btn danger"
         onClick={handleClear}
@@ -148,6 +175,7 @@ export default function BottomToolbar() {
 
       {/* Undo */}
       <button
+        type="button"
         data-ocid="toolbar.undo_button"
         className="synth-btn"
         onClick={handleUndo}
@@ -164,6 +192,7 @@ export default function BottomToolbar() {
 
       {/* Preview/HQ */}
       <button
+        type="button"
         data-ocid="toolbar.preview_toggle"
         className={`synth-btn${previewMode ? " active" : ""}`}
         onClick={handlePreviewToggle}
@@ -175,6 +204,7 @@ export default function BottomToolbar() {
 
       {/* Mono/Stereo */}
       <button
+        type="button"
         data-ocid="toolbar.mono_stereo_toggle"
         className={`synth-btn${stereoMode ? " active" : ""}`}
         onClick={handleStereoToggle}
@@ -186,6 +216,7 @@ export default function BottomToolbar() {
 
       {/* Mutate Mode */}
       <button
+        type="button"
         data-ocid="toolbar.mutate_toggle"
         className={`synth-btn${mutateMode ? " active" : ""}`}
         onClick={() => setMutateMode(!mutateMode)}
@@ -200,6 +231,26 @@ export default function BottomToolbar() {
         title="Mutate Mode"
       >
         MUT
+      </button>
+
+      {/* OD - Full Reset */}
+      <button
+        type="button"
+        data-ocid="toolbar.od_button"
+        className="synth-btn danger"
+        onClick={handleOD}
+        style={{
+          minWidth: "36px",
+          padding: "4px 6px",
+          fontSize: "10px",
+          fontWeight: "bold",
+          borderColor: "#ff4400",
+          color: "#ff6622",
+          background: "rgba(255,68,0,0.15)",
+        }}
+        title="OD: Override / Full Reset"
+      >
+        OD
       </button>
     </div>
   );

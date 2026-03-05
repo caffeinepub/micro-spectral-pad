@@ -35,10 +35,12 @@ function SliderRow({
   onChange: (v: number) => void;
   displayFn?: (v: number) => string;
 }) {
+  const inputId = `mod-slider-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="synth-slider-row">
-      <label>{label}</label>
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type="range"
         min={min}
         max={max}
@@ -62,14 +64,25 @@ function ToggleRow({
   value,
   onChange,
 }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  const toggleId = `mod-toggle-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="toggle-row">
-      <label>{label}</label>
+      <label htmlFor={toggleId}>{label}</label>
       <div
+        id={toggleId}
+        role="switch"
+        aria-checked={value}
+        tabIndex={0}
         className={`synth-toggle${value ? " on" : ""}`}
         onClick={() => {
           onChange(!value);
           syncParamsToAudio();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            onChange(!value);
+            syncParamsToAudio();
+          }
         }}
       />
     </div>
@@ -87,10 +100,12 @@ function SelectRow({
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }) {
+  const selectId = `mod-select-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="synth-slider-row">
-      <label>{label}</label>
+      <label htmlFor={selectId}>{label}</label>
       <select
+        id={selectId}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -126,19 +141,40 @@ function Collapsible({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ marginBottom: "4px" }}>
-      <div
+      <button
+        type="button"
         className={`collapsible-header${enabled ? " enabled" : ""}`}
+        style={{
+          width: "100%",
+          textAlign: "left",
+          cursor: "pointer",
+          background: "none",
+          border: "none",
+          color: "inherit",
+          font: "inherit",
+          padding: 0,
+        }}
         onClick={() => setOpen((o) => !o)}
       >
         <span>{title}</span>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {onToggle && (
             <div
+              role="switch"
+              aria-checked={!!enabled}
+              tabIndex={0}
               className={`synth-toggle${enabled ? " on" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggle();
                 syncParamsToAudio();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.stopPropagation();
+                  onToggle();
+                  syncParamsToAudio();
+                }
               }}
             />
           )}
@@ -146,7 +182,7 @@ function Collapsible({
             {open ? "▲" : "▼"}
           </span>
         </div>
-      </div>
+      </button>
       {open && (
         <div
           style={{
@@ -194,9 +230,10 @@ function StepSequencerGrid({ stepCount }: { stepCount: number }) {
       {Array.from({ length: Math.min(stepCount, 32) }, (_, i) => {
         const val = steps[i] ?? 0;
         const height = Math.abs(val);
+        const stepKey = `seq-step-cell-${i}-of-${stepCount}`;
         return (
           <div
-            key={i}
+            key={stepKey}
             style={{
               flex: 1,
               background: "var(--synth-control)",
@@ -270,6 +307,7 @@ export default function ModulesPanel({ onClose }: Props) {
           DSP MODULES
         </span>
         <button
+          type="button"
           className="synth-btn"
           onClick={onClose}
           style={{ padding: "3px 8px" }}
@@ -337,6 +375,7 @@ export default function ModulesPanel({ onClose }: Props) {
           <div style={{ display: "flex", gap: "4px" }}>
             {([8, 16, 32] as StepCount[]).map((n) => (
               <button
+                type="button"
                 key={n}
                 className={`synth-btn${state.seqStepCount === n ? " active" : ""}`}
                 onClick={() => state.setSeqStepCount(n)}
@@ -384,6 +423,7 @@ export default function ModulesPanel({ onClose }: Props) {
           }}
         >
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -393,6 +433,7 @@ export default function ModulesPanel({ onClose }: Props) {
             CLEAR
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -403,6 +444,7 @@ export default function ModulesPanel({ onClose }: Props) {
             RAND
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -415,6 +457,7 @@ export default function ModulesPanel({ onClose }: Props) {
             ◀
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -456,6 +499,7 @@ export default function ModulesPanel({ onClose }: Props) {
           }
         />
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "4px" }}
           onClick={() => {
@@ -488,6 +532,7 @@ export default function ModulesPanel({ onClose }: Props) {
           onChange={state.setCenterShiftInterpolation}
         />
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "4px" }}
           onClick={() => {
@@ -549,6 +594,7 @@ export default function ModulesPanel({ onClose }: Props) {
           ]}
         />
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "4px" }}
           onClick={() => {
@@ -597,6 +643,7 @@ export default function ModulesPanel({ onClose }: Props) {
           displayFn={(v) => `${v.toFixed(2)}Hz`}
         />
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "4px" }}
           onClick={() => {
@@ -654,6 +701,7 @@ export default function ModulesPanel({ onClose }: Props) {
           ]}
         />
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "4px" }}
           onClick={() => {}}
@@ -693,6 +741,7 @@ export default function ModulesPanel({ onClose }: Props) {
         />
         <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -702,6 +751,7 @@ export default function ModulesPanel({ onClose }: Props) {
             RAND SEED
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -710,7 +760,12 @@ export default function ModulesPanel({ onClose }: Props) {
           >
             SAVE
           </button>
-          <button className="synth-btn" style={{ flex: 1 }} onClick={() => {}}>
+          <button
+            type="button"
+            className="synth-btn"
+            style={{ flex: 1 }}
+            onClick={() => {}}
+          >
             RECALL
           </button>
         </div>
@@ -748,10 +803,16 @@ export default function ModulesPanel({ onClose }: Props) {
           displayFn={(v) => `${Math.round(v * 100)}%`}
         />
         <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
-          <button className="synth-btn" style={{ flex: 1 }} onClick={() => {}}>
+          <button
+            type="button"
+            className="synth-btn"
+            style={{ flex: 1 }}
+            onClick={() => {}}
+          >
             RANDOMIZE
           </button>
           <button
+            type="button"
             className="synth-btn"
             style={{ flex: 1 }}
             onClick={() => {
@@ -792,34 +853,39 @@ export default function ModulesPanel({ onClose }: Props) {
                 gap: "4px",
               }}
             >
-              {state.customRatios.map((ratio, i) => (
-                <input
-                  key={i}
-                  type="number"
-                  step="0.001"
-                  value={ratio.toFixed(4)}
-                  onChange={(e) => {
-                    const newRatios = [...state.customRatios];
-                    newRatios[i] = Number.parseFloat(e.target.value) || 1;
-                    state.setCustomRatios(newRatios);
-                  }}
-                  style={{
-                    background: "var(--synth-control)",
-                    border: "1px solid var(--synth-border)",
-                    color: "var(--synth-active)",
-                    padding: "3px 4px",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    fontFamily: "inherit",
-                    borderRadius: "2px",
-                    width: "100%",
-                  }}
-                />
-              ))}
+              {state.customRatios.map((ratio, position) => {
+                const stableKey = `tr-${position}-${Math.round(ratio * 10000)}`;
+                return (
+                  <input
+                    key={stableKey}
+                    type="number"
+                    step="0.001"
+                    value={ratio.toFixed(4)}
+                    onChange={(e) => {
+                      const newRatios = [...state.customRatios];
+                      newRatios[position] =
+                        Number.parseFloat(e.target.value) || 1;
+                      state.setCustomRatios(newRatios);
+                    }}
+                    style={{
+                      background: "var(--synth-control)",
+                      border: "1px solid var(--synth-border)",
+                      color: "var(--synth-active)",
+                      padding: "3px 4px",
+                      fontSize: "9px",
+                      textAlign: "center",
+                      fontFamily: "inherit",
+                      borderRadius: "2px",
+                      width: "100%",
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
         <button
+          type="button"
           className="synth-btn"
           style={{ width: "100%", marginTop: "6px" }}
           onClick={() => {

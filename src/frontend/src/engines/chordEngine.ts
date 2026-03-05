@@ -246,6 +246,52 @@ export const JUST_INTONATION_RATIOS = [
   15 / 8,
 ];
 
+/**
+ * Compute grid row indices (0 = lowest freq, ROWS-1 = highest) that correspond
+ * to the active chord tones, including all octave equivalents within 40–8000 Hz.
+ * Returns a Set<number> of allowed row indices.
+ */
+export function getChordRowsForGrid(
+  root: string,
+  octave: number,
+  chordType: string,
+  inversion: string,
+  spread: number,
+  voiceCount: number,
+  voiceStacking: "closed" | "open" | "drop2",
+  rows: number,
+): Set<number> {
+  const midiNotes = getChordNotes(
+    root,
+    octave,
+    chordType,
+    inversion,
+    spread,
+    voiceCount,
+    voiceStacking,
+  );
+
+  const LOG_40 = Math.log(40);
+  const LOG_8000 = Math.log(8000);
+  const allowed = new Set<number>();
+
+  for (const baseMidi of midiNotes) {
+    // Cover octave variants: ± 0, ± 12, ± 24, ± 36 semitones
+    for (let offset = -36; offset <= 36; offset += 12) {
+      const midi = baseMidi + offset;
+      const freq = midiToFreq(midi);
+      if (freq < 40 || freq > 8000) continue;
+      const rawRow = Math.round(
+        ((Math.log(freq) - LOG_40) / (LOG_8000 - LOG_40)) * (rows - 1),
+      );
+      const row = Math.max(0, Math.min(rows - 1, rawRow));
+      allowed.add(row);
+    }
+  }
+
+  return allowed;
+}
+
 export function applyMicroTuning(
   freq: number,
   noteIndex: number,
