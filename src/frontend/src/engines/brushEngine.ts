@@ -36,10 +36,31 @@ const MICRO_RAND_TABLE = new Float32Array(256);
 
 let microRandIndex = 0;
 
+// ─── Chord Lock ────────────────────────────────────────────────────────────
+// Set from SpectralCanvas when chordModeEnabled. null = no filtering.
+let chordAllowedRows: Set<number> | null = null;
+
+export function setChordAllowedRows(rows: Set<number> | null) {
+  chordAllowedRows = rows;
+}
+
+// ─── HQ Gaussian Smoothing ─────────────────────────────────────────────────
+let hqGaussianEnabled = false;
+let hqBrushSoftness = 0.8;
+
+export function setHqBrushParams(enabled: boolean, softness: number) {
+  hqGaussianEnabled = enabled;
+  hqBrushSoftness = softness;
+}
+
 function getCellIndex(col: number, row: number): number {
   return (col * ROWS + row) * 3;
 }
 
+/**
+ * writeCell - central write with chord-lock guard.
+ * Skips write if chordAllowedRows is set and row is not in the allowed set.
+ */
 function writeCell(
   col: number,
   row: number,
@@ -48,6 +69,13 @@ function writeCell(
   saturation: number,
 ) {
   if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
+  // Chord lock: skip write if row is not allowed
+  if (
+    chordAllowedRows &&
+    chordAllowedRows.size > 0 &&
+    !chordAllowedRows.has(row)
+  )
+    return;
   const idx = getCellIndex(col, row);
   cellData[idx] = Math.max(0, Math.min(1, amplitude));
   cellData[idx + 1] = Math.max(0, Math.min(1, hueNorm));
@@ -92,6 +120,34 @@ function applyBrushToSize(
   }
 }
 
+/**
+ * HQ Gaussian smooth pass: 5-point 1D cross kernel along frequency axis.
+ * Applied after flat write when HQ gaussian is enabled.
+ */
+function applyGaussianSmooth(
+  col: number,
+  row: number,
+  sigma: number,
+  strength: number,
+) {
+  const offsets = [-2, -1, 0, 1, 2];
+  for (const dr of offsets) {
+    const r = row + dr;
+    if (r < 0 || r >= ROWS) continue;
+    if (
+      chordAllowedRows &&
+      chordAllowedRows.size > 0 &&
+      !chordAllowedRows.has(r)
+    )
+      continue;
+    const g = Math.exp(-(dr * dr) / (2 * sigma * sigma));
+    const idx = getCellIndex(col, r);
+    const existing = cellData[idx];
+    cellData[idx] = Math.min(1, existing + strength * g * 0.15);
+    markCellDirty(col, r);
+  }
+}
+
 // Brush Type 0: Flat Write
 export function applyFlatWrite(
   col: number,
@@ -103,6 +159,10 @@ export function applyFlatWrite(
 ) {
   applyBrushToSize(col, row, size, (c, r) => {
     writeCell(c, r, intensity, hueNorm, saturation);
+    if (hqGaussianEnabled) {
+      const sigma = hqBrushSoftness * 2;
+      applyGaussianSmooth(c, r, sigma, intensity);
+    }
   });
   markColumnDirty(col);
 }
@@ -238,6 +298,13 @@ export function applyFormantBand(
 // Brush Type 6: Erase
 export function applyErase(col: number, row: number, size: number) {
   applyBrushToSize(col, row, size, (c, r) => {
+    // Erase respects chord lock - only erase allowed rows
+    if (
+      chordAllowedRows &&
+      chordAllowedRows.size > 0 &&
+      !chordAllowedRows.has(r)
+    )
+      return;
     const idx = getCellIndex(c, r);
     cellData[idx] = 0;
     cellData[idx + 1] = 0;

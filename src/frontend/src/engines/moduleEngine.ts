@@ -1,17 +1,13 @@
 /**
  * Module Engine - DSP module parameter management
- * Provides smooth parameter ramping and module bypass logic
- * All processing reads from audioParams
  */
 
 import { useSynthStore } from "../store/synthStore";
-import { audioParams } from "./audioEngine";
+import { audioParams, lushParams, updateLushParams } from "./audioEngine";
 
-// Throttled update timer
 let updateTimer: ReturnType<typeof setTimeout> | null = null;
-const UPDATE_INTERVAL = 100; // max 10 updates/sec
+const UPDATE_INTERVAL = 100;
 
-// Smooth parameter ramp targets
 const paramTargets: Record<string, number> = {};
 const paramCurrents: Record<string, number> = {};
 
@@ -21,14 +17,11 @@ export function setParamSmoothed(
   immediate = false,
 ) {
   paramTargets[key] = value;
-  if (immediate || !(key in paramCurrents)) {
-    paramCurrents[key] = value;
-  }
+  if (immediate || !(key in paramCurrents)) paramCurrents[key] = value;
 }
 
-// Called from RAF to smooth parameters
 export function tickParamSmoothing(deltaMs: number) {
-  const alpha = 1 - Math.exp(-deltaMs / 15); // ~15ms time constant
+  const alpha = 1 - Math.exp(-deltaMs / 15);
   for (const key in paramTargets) {
     const target = paramTargets[key];
     const current = paramCurrents[key] ?? target;
@@ -37,7 +30,6 @@ export function tickParamSmoothing(deltaMs: number) {
   }
 }
 
-// Sync all store params to audioParams (throttled)
 export function syncParamsToAudio() {
   if (updateTimer) return;
   updateTimer = setTimeout(() => {
@@ -46,7 +38,6 @@ export function syncParamsToAudio() {
   }, UPDATE_INTERVAL);
 }
 
-// Immediate sync (for transport controls)
 export function syncParamsImmediately() {
   if (updateTimer) {
     clearTimeout(updateTimer);
@@ -74,90 +65,88 @@ function doSyncParams() {
   audioParams.spectralTilt = state.spectralTilt + state.macroBrightness * 100;
   audioParams.centerShiftEnabled = state.centerShiftEnabled;
   audioParams.centerShiftAmount = state.centerShiftAmount;
-
-  // Drift - macro motion affects drift speed
   audioParams.driftEnabled = state.driftEnabled;
   audioParams.driftAmount = state.driftAmount * state.macroDrift;
   audioParams.driftSpeed = state.driftSpeed * (1 + state.macroMotion);
   audioParams.driftMode = state.driftMode;
   audioParams.highHarmonicEmphasis = state.highHarmonicEmphasis;
-
-  // Sequencer
   audioParams.seqEnabled = state.seqEnabled;
   audioParams.seqStepCount = state.seqStepCount;
   audioParams.seqMode = state.seqMode;
   audioParams.seqLimitHarmonics = state.seqLimitHarmonics;
   audioParams.bpm = state.bpm;
   audioParams.seqDivision = state.seqTempoDivision;
-
-  // Partial envelope
   audioParams.partialEnvEnabled = state.partialEnvEnabled;
   audioParams.partialAttack = state.partialAttack;
   audioParams.partialDecay = state.partialDecay;
   audioParams.partialSustain = state.partialSustain;
   audioParams.partialRelease = state.partialRelease;
-
-  // Distortion
   audioParams.distortionEnabled = state.distortionEnabled;
   audioParams.distortionStart = state.distortionStart - 1;
   audioParams.distortionEnd = state.distortionEnd - 1;
   audioParams.distortionDrive = state.distortionDrive;
   audioParams.distortionClip = state.distortionClipMode;
-
-  // Noise layer
   audioParams.noiseLayerEnabled = state.noiseLayerEnabled;
   audioParams.noiseLayerAmount = state.noiseLayerAmount;
   audioParams.noiseLayerAffect = state.noiseLayerAffect;
-
-  // Cluster
   audioParams.clusterEnabled = state.clusterEnabled;
   audioParams.clusterSize = state.clusterSize;
   audioParams.clusterResonance = state.clusterResonance;
-
-  // Micro tuning
   audioParams.microTuningEnabled = state.microTuningEnabled;
   audioParams.customRatios = state.customRatios;
-
-  // Sub harmonic
   audioParams.subHarmonicEnabled = state.subHarmonicEnabled;
   audioParams.hybridBalance = state.hybridBalance;
+
+  // Sync lush params
+  updateLushParams({
+    enabled: state.lushModeEnabled,
+    unisonVoices: state.lushUnisonVoices,
+    detuneAmount: state.lushDetuneAmount,
+    stereoSpread: state.lushStereoSpread / 100,
+    analogDriftAmount: state.lushAnalogDriftAmount,
+    driftSpeed: state.lushDriftSpeed,
+    subEnabled: state.lushSubEnabled,
+    subLevel: state.lushSubLevel / 100,
+    subCutoffLimit: state.lushSubCutoffLimit,
+    satEnabled: state.lushSatEnabled,
+    satDrive: state.lushSatDrive,
+    satMix: state.lushSatMix / 100,
+    filterEnabled: state.lushFilterEnabled,
+    filterType: state.lushFilterType,
+    filterCutoff: state.lushFilterCutoff,
+    filterResonance: state.lushFilterResonance,
+    filterLfoEnabled: state.lushFilterLfoEnabled,
+    filterLfoRate: state.lushFilterLfoRate,
+    filterLfoDepth: state.lushFilterLfoDepth,
+    chorusEnabled: state.lushChorusEnabled,
+    chorusDelay: state.lushChorusDelay / 1000,
+    chorusModDepth: state.lushChorusModDepth / 1000,
+    chorusRate: state.lushChorusRate,
+    chorusMix: state.lushChorusMix / 100,
+    bodyResEnabled: state.lushBodyResEnabled,
+    bodyResGain: state.lushBodyResGain / 100,
+  });
+  void lushParams;
 }
 
-// Performance safe mode enforcement
 export function enforceSafeMode(enabled: boolean) {
   const state = useSynthStore.getState();
   if (enabled) {
-    // Reduce seqStepCount if too high
-    if (state.seqStepCount > 16) {
-      useSynthStore.getState().setSeqStepCount(16);
-    }
-    // Disable interpolation toggles
-    if (state.centerShiftInterpolation) {
+    if (state.seqStepCount > 16) useSynthStore.getState().setSeqStepCount(16);
+    if (state.centerShiftInterpolation)
       useSynthStore.getState().setCenterShiftInterpolation(false);
-    }
   }
 }
 
-// Macro control updates - apply macro to relevant params
 export function applyMacroControls() {
   const state = useSynthStore.getState();
-
-  // Macro Drift → Drift Amount
-  if (state.driftEnabled) {
+  if (state.driftEnabled)
     audioParams.driftAmount = state.driftAmount * state.macroDrift;
-  }
-
-  // Macro Brightness → Spectral Tilt
   audioParams.spectralTilt = state.spectralTilt + state.macroBrightness * 50;
-
-  // Macro Width → Stereo Spread
   audioParams.stereoSpread = state.stereoSpreadAmount * state.macroWidth * 2;
-
-  // Macro Motion → Drift Speed + Seq depth
   audioParams.driftSpeed = state.driftSpeed * (1 + state.macroMotion * 2);
 }
 
-// Initialize with current state
 export function initModuleEngine() {
   doSyncParams();
 }

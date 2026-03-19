@@ -2,16 +2,14 @@ import { create } from "zustand";
 
 export const COLS = 64;
 export const ROWS = 48;
-export const CELL_FLOATS = 3; // amplitude, hueNorm, saturation
+export const CELL_FLOATS = 3;
 export const TOTAL_CELLS = COLS * ROWS * CELL_FLOATS;
 
-// Preallocate once, never recreated
 export const cellData = new Float32Array(TOTAL_CELLS);
 export const undoBufferData = new Float32Array(TOTAL_CELLS);
 export const dirtyColumnsData = new Uint8Array(COLS);
 export const seqStepsData = new Float32Array(32);
 
-// Precomputed frequency bands (log-spaced 40Hz to 8000Hz)
 export const freqBands = new Float32Array(ROWS);
 for (let i = 0; i < ROWS; i++) {
   freqBands[i] = 40 * 200 ** (i / (ROWS - 1));
@@ -35,23 +33,20 @@ export type ActivePanel =
   | "sound"
   | "modules"
   | "chord"
-  | "settings";
+  | "settings"
+  | "lush";
 export type StepCount = 8 | 16 | 32;
 export type Material = "glass" | "metal" | "string";
 export type NoiseColor = "white" | "pink";
+export type LushFilterType = "lowpass" | "softlowpass" | "bandpass";
 
 export interface SynthState {
-  // Transport
   isPlaying: boolean;
   playheadCol: number;
   bpm: number;
   loopEnabled: boolean;
-
-  // Grid
   previewMode: boolean;
   hasUndo: boolean;
-
-  // Brush
   brushType: BrushType;
   brushSize: 1 | 2 | 3;
   brushIntensity: number;
@@ -61,8 +56,6 @@ export interface SynthState {
   mutationType: MutationType;
   mutateStrength: number;
   formantWidth: number;
-
-  // Sound
   soundMode: SoundMode;
   masterVolume: number;
   attack: number;
@@ -82,81 +75,55 @@ export interface SynthState {
   damping: number;
   hybridBalance: number;
   subHarmonicEnabled: boolean;
-
-  // Modules
   masterBypass: boolean;
   performanceSafeMode: boolean;
   cpuUsage: number;
-
-  // Harmonic Drift
   driftEnabled: boolean;
   driftAmount: number;
   driftSpeed: number;
   driftMode: DriftMode;
   highHarmonicEmphasis: number;
-
-  // Step Sequencer
   seqEnabled: boolean;
   seqStepCount: StepCount;
   seqTempoDivision: SeqDivision;
   seqMode: SeqMode;
   seqLimitHarmonics: boolean;
   seqSmoothing: number;
-
-  // Spectral Tilt
   spectralTilt: number;
-
-  // Center Shift
   centerShiftEnabled: boolean;
   centerShiftAmount: number;
   centerShiftInterpolation: boolean;
-
-  // Partial Envelope
   partialEnvEnabled: boolean;
   partialAttack: number;
   partialDecay: number;
   partialSustain: number;
   partialRelease: number;
   partialApplyMode: PartialApplyMode;
-
-  // Stereo Spread Module
   stereoSpreadEnabled: boolean;
   stereoSpreadModAmount: number;
   stereoSpreadCurve: SpreadCurve;
   stereoSpreadDriftWidth: number;
-
-  // Partial Distortion
   distortionEnabled: boolean;
   distortionStart: number;
   distortionEnd: number;
   distortionDrive: number;
   distortionClipMode: DistortionClip;
-
-  // Noise Layer
   noiseLayerEnabled: boolean;
   noiseLayerAmount: number;
   noiseLayerAffect: NoiseAffect;
   noiseLayerLockFundamental: boolean;
   noiseLayerSeed: number;
-
-  // Cluster Mode
   clusterEnabled: boolean;
   clusterSize: number;
   clusterSpacing: number;
   clusterResonance: number;
-
-  // Micro Tuning
   microTuningEnabled: boolean;
   microTuningScale: TuningScale;
   customRatios: number[];
-
-  // Macro Controls
   macroDrift: number;
   macroBrightness: number;
   macroWidth: number;
   macroMotion: number;
-
-  // Chord Mode
   chordModeEnabled: boolean;
   chordRoot: string;
   chordOctave: number;
@@ -183,14 +150,57 @@ export interface SynthState {
   topVoiceShine: boolean;
   bassLevel: number;
   topVoiceLevel: number;
-
+  hqModeEnabled: boolean;
+  hqSpectralBoost: number;
+  hqLogFreqScaling: boolean;
+  hqHarmonicSnap: boolean;
+  hqGaussianSmoothing: boolean;
+  hqBrushSoftness: number;
+  hqPhaseRandomization: boolean;
+  hqPhaseSpread: number;
+  hqFrameInterpolation: boolean;
+  hqAdditiveOversampling: boolean;
+  hqOversampleRate: "1x" | "2x";
+  hqSpectralTiltComp: boolean;
+  hqTiltStrength: number;
+  hqPeakPartialRendering: boolean;
+  hqPartialThreshold: number;
+  hqTemporalEnvSmoothing: boolean;
+  hqEnvelopeAttack: number;
+  hqEnvelopeDecay: number;
+  // Lush Mode
+  lushModeEnabled: boolean;
+  lushUnisonVoices: number;
+  lushDetuneAmount: number;
+  lushStereoSpread: number;
+  lushAnalogDriftAmount: number;
+  lushDriftSpeed: number;
+  lushSubEnabled: boolean;
+  lushSubLevel: number;
+  lushSubCutoffLimit: number;
+  lushSatEnabled: boolean;
+  lushSatDrive: number;
+  lushSatMix: number;
+  lushFilterEnabled: boolean;
+  lushFilterType: LushFilterType;
+  lushFilterCutoff: number;
+  lushFilterResonance: number;
+  lushFilterLfoEnabled: boolean;
+  lushFilterLfoRate: number;
+  lushFilterLfoDepth: number;
+  lushChorusEnabled: boolean;
+  lushChorusDelay: number;
+  lushChorusModDepth: number;
+  lushChorusRate: number;
+  lushChorusMix: number;
+  lushBodyResEnabled: boolean;
+  lushBodyResGain: number;
   // UI
   activePanel: ActivePanel;
   currentChordName: string;
   tempoSyncEnabled: boolean;
   triggerMode: "auto" | "manual" | "midi";
   retriggerEnvelopes: boolean;
-
   // Actions
   setIsPlaying: (v: boolean) => void;
   setPlayheadCol: (v: number) => void;
@@ -300,6 +310,51 @@ export interface SynthState {
   setTopVoiceShine: (v: boolean) => void;
   setBassLevel: (v: number) => void;
   setTopVoiceLevel: (v: number) => void;
+  setHqModeEnabled: (v: boolean) => void;
+  setHqSpectralBoost: (v: number) => void;
+  setHqLogFreqScaling: (v: boolean) => void;
+  setHqHarmonicSnap: (v: boolean) => void;
+  setHqGaussianSmoothing: (v: boolean) => void;
+  setHqBrushSoftness: (v: number) => void;
+  setHqPhaseRandomization: (v: boolean) => void;
+  setHqPhaseSpread: (v: number) => void;
+  setHqFrameInterpolation: (v: boolean) => void;
+  setHqAdditiveOversampling: (v: boolean) => void;
+  setHqOversampleRate: (v: "1x" | "2x") => void;
+  setHqSpectralTiltComp: (v: boolean) => void;
+  setHqTiltStrength: (v: number) => void;
+  setHqPeakPartialRendering: (v: boolean) => void;
+  setHqPartialThreshold: (v: number) => void;
+  setHqTemporalEnvSmoothing: (v: boolean) => void;
+  setHqEnvelopeAttack: (v: number) => void;
+  setHqEnvelopeDecay: (v: number) => void;
+  // Lush setters
+  setLushModeEnabled: (v: boolean) => void;
+  setLushUnisonVoices: (v: number) => void;
+  setLushDetuneAmount: (v: number) => void;
+  setLushStereoSpread: (v: number) => void;
+  setLushAnalogDriftAmount: (v: number) => void;
+  setLushDriftSpeed: (v: number) => void;
+  setLushSubEnabled: (v: boolean) => void;
+  setLushSubLevel: (v: number) => void;
+  setLushSubCutoffLimit: (v: number) => void;
+  setLushSatEnabled: (v: boolean) => void;
+  setLushSatDrive: (v: number) => void;
+  setLushSatMix: (v: number) => void;
+  setLushFilterEnabled: (v: boolean) => void;
+  setLushFilterType: (v: LushFilterType) => void;
+  setLushFilterCutoff: (v: number) => void;
+  setLushFilterResonance: (v: number) => void;
+  setLushFilterLfoEnabled: (v: boolean) => void;
+  setLushFilterLfoRate: (v: number) => void;
+  setLushFilterLfoDepth: (v: number) => void;
+  setLushChorusEnabled: (v: boolean) => void;
+  setLushChorusDelay: (v: number) => void;
+  setLushChorusModDepth: (v: number) => void;
+  setLushChorusRate: (v: number) => void;
+  setLushChorusMix: (v: number) => void;
+  setLushBodyResEnabled: (v: boolean) => void;
+  setLushBodyResGain: (v: number) => void;
   setActivePanel: (v: ActivePanel) => void;
   setCurrentChordName: (v: string) => void;
   setTempoSyncEnabled: (v: boolean) => void;
@@ -307,7 +362,6 @@ export interface SynthState {
   setRetriggerEnvelopes: (v: boolean) => void;
 }
 
-// Default just intonation ratios
 const DEFAULT_RATIOS = [
   1,
   16 / 15,
@@ -324,17 +378,12 @@ const DEFAULT_RATIOS = [
 ];
 
 export const useSynthStore = create<SynthState>((set) => ({
-  // Transport
   isPlaying: false,
   playheadCol: 0,
   bpm: 120,
   loopEnabled: true,
-
-  // Grid
   previewMode: false,
   hasUndo: false,
-
-  // Brush
   brushType: 0,
   brushSize: 1,
   brushIntensity: 0.8,
@@ -344,8 +393,6 @@ export const useSynthStore = create<SynthState>((set) => ({
   mutationType: 0,
   mutateStrength: 0.5,
   formantWidth: 4,
-
-  // Sound
   soundMode: "additive",
   masterVolume: 0.7,
   attack: 0.01,
@@ -365,81 +412,55 @@ export const useSynthStore = create<SynthState>((set) => ({
   damping: 0.5,
   hybridBalance: 0.5,
   subHarmonicEnabled: false,
-
-  // Modules
   masterBypass: false,
   performanceSafeMode: false,
   cpuUsage: 0,
-
-  // Harmonic Drift
   driftEnabled: false,
   driftAmount: 0.3,
   driftSpeed: 0.5,
   driftMode: "sine",
   highHarmonicEmphasis: 0.5,
-
-  // Step Sequencer
   seqEnabled: false,
   seqStepCount: 16,
   seqTempoDivision: "1/8",
   seqMode: "amplitude",
   seqLimitHarmonics: false,
   seqSmoothing: 10,
-
-  // Spectral Tilt
   spectralTilt: 0,
-
-  // Center Shift
   centerShiftEnabled: false,
   centerShiftAmount: 0,
   centerShiftInterpolation: true,
-
-  // Partial Envelope
   partialEnvEnabled: false,
   partialAttack: 0.1,
   partialDecay: 0.3,
   partialSustain: 0.8,
   partialRelease: 0.5,
   partialApplyMode: "global",
-
-  // Stereo Spread Module
   stereoSpreadEnabled: false,
   stereoSpreadModAmount: 0.5,
   stereoSpreadCurve: "linear",
   stereoSpreadDriftWidth: 0.5,
-
-  // Partial Distortion
   distortionEnabled: false,
   distortionStart: 1,
   distortionEnd: 48,
   distortionDrive: 1.0,
   distortionClipMode: "soft",
-
-  // Noise Layer
   noiseLayerEnabled: false,
   noiseLayerAmount: 0.2,
   noiseLayerAffect: "amplitude",
   noiseLayerLockFundamental: true,
   noiseLayerSeed: 42,
-
-  // Cluster Mode
   clusterEnabled: false,
   clusterSize: 4,
   clusterSpacing: 0.5,
   clusterResonance: 1.0,
-
-  // Micro Tuning
   microTuningEnabled: false,
   microTuningScale: "equal",
   customRatios: DEFAULT_RATIOS,
-
-  // Macro Controls
   macroDrift: 0.3,
   macroBrightness: 0,
   macroWidth: 0.5,
   macroMotion: 0.3,
-
-  // Chord Mode
   chordModeEnabled: false,
   chordRoot: "C",
   chordOctave: 4,
@@ -452,7 +473,7 @@ export const useSynthStore = create<SynthState>((set) => ({
   chordVoiceCount: 4,
   chordVoiceStacking: "closed",
   progressionEnabled: false,
-  progressionPreset: "I–IV–V–I",
+  progressionPreset: "I\u2013IV\u2013V\u2013I",
   progressionLength: 4,
   chordDuration: "1 Bar",
   loopProgression: true,
@@ -466,15 +487,57 @@ export const useSynthStore = create<SynthState>((set) => ({
   topVoiceShine: false,
   bassLevel: 1.0,
   topVoiceLevel: 1.0,
-
-  // UI
+  hqModeEnabled: false,
+  hqSpectralBoost: 1.25,
+  hqLogFreqScaling: true,
+  hqHarmonicSnap: false,
+  hqGaussianSmoothing: true,
+  hqBrushSoftness: 0.8,
+  hqPhaseRandomization: true,
+  hqPhaseSpread: 0.06,
+  hqFrameInterpolation: true,
+  hqAdditiveOversampling: true,
+  hqOversampleRate: "2x",
+  hqSpectralTiltComp: true,
+  hqTiltStrength: -0.3,
+  hqPeakPartialRendering: true,
+  hqPartialThreshold: 0.05,
+  hqTemporalEnvSmoothing: true,
+  hqEnvelopeAttack: 0.005,
+  hqEnvelopeDecay: 0.06,
+  // Lush Mode defaults
+  lushModeEnabled: false,
+  lushUnisonVoices: 3,
+  lushDetuneAmount: 4,
+  lushStereoSpread: 60,
+  lushAnalogDriftAmount: 0.4,
+  lushDriftSpeed: 0.5,
+  lushSubEnabled: false,
+  lushSubLevel: 25,
+  lushSubCutoffLimit: 150,
+  lushSatEnabled: false,
+  lushSatDrive: 1.5,
+  lushSatMix: 35,
+  lushFilterEnabled: false,
+  lushFilterType: "lowpass",
+  lushFilterCutoff: 6000,
+  lushFilterResonance: 0.2,
+  lushFilterLfoEnabled: false,
+  lushFilterLfoRate: 0.05,
+  lushFilterLfoDepth: 1000,
+  lushChorusEnabled: false,
+  lushChorusDelay: 20,
+  lushChorusModDepth: 2,
+  lushChorusRate: 0.2,
+  lushChorusMix: 30,
+  lushBodyResEnabled: false,
+  lushBodyResGain: 30,
   activePanel: null,
   currentChordName: "Cmaj",
   tempoSyncEnabled: false,
   triggerMode: "auto",
   retriggerEnvelopes: false,
-
-  // Actions - simple setters
+  // Actions
   setIsPlaying: (v) => set({ isPlaying: v }),
   setPlayheadCol: (v) => set({ playheadCol: v }),
   setBpm: (v) => set({ bpm: v }),
@@ -583,6 +646,51 @@ export const useSynthStore = create<SynthState>((set) => ({
   setTopVoiceShine: (v) => set({ topVoiceShine: v }),
   setBassLevel: (v) => set({ bassLevel: v }),
   setTopVoiceLevel: (v) => set({ topVoiceLevel: v }),
+  setHqModeEnabled: (v) => set({ hqModeEnabled: v }),
+  setHqSpectralBoost: (v) => set({ hqSpectralBoost: v }),
+  setHqLogFreqScaling: (v) => set({ hqLogFreqScaling: v }),
+  setHqHarmonicSnap: (v) => set({ hqHarmonicSnap: v }),
+  setHqGaussianSmoothing: (v) => set({ hqGaussianSmoothing: v }),
+  setHqBrushSoftness: (v) => set({ hqBrushSoftness: v }),
+  setHqPhaseRandomization: (v) => set({ hqPhaseRandomization: v }),
+  setHqPhaseSpread: (v) => set({ hqPhaseSpread: v }),
+  setHqFrameInterpolation: (v) => set({ hqFrameInterpolation: v }),
+  setHqAdditiveOversampling: (v) => set({ hqAdditiveOversampling: v }),
+  setHqOversampleRate: (v) => set({ hqOversampleRate: v }),
+  setHqSpectralTiltComp: (v) => set({ hqSpectralTiltComp: v }),
+  setHqTiltStrength: (v) => set({ hqTiltStrength: v }),
+  setHqPeakPartialRendering: (v) => set({ hqPeakPartialRendering: v }),
+  setHqPartialThreshold: (v) => set({ hqPartialThreshold: v }),
+  setHqTemporalEnvSmoothing: (v) => set({ hqTemporalEnvSmoothing: v }),
+  setHqEnvelopeAttack: (v) => set({ hqEnvelopeAttack: v }),
+  setHqEnvelopeDecay: (v) => set({ hqEnvelopeDecay: v }),
+  // Lush setters
+  setLushModeEnabled: (v) => set({ lushModeEnabled: v }),
+  setLushUnisonVoices: (v) => set({ lushUnisonVoices: v }),
+  setLushDetuneAmount: (v) => set({ lushDetuneAmount: v }),
+  setLushStereoSpread: (v) => set({ lushStereoSpread: v }),
+  setLushAnalogDriftAmount: (v) => set({ lushAnalogDriftAmount: v }),
+  setLushDriftSpeed: (v) => set({ lushDriftSpeed: v }),
+  setLushSubEnabled: (v) => set({ lushSubEnabled: v }),
+  setLushSubLevel: (v) => set({ lushSubLevel: v }),
+  setLushSubCutoffLimit: (v) => set({ lushSubCutoffLimit: v }),
+  setLushSatEnabled: (v) => set({ lushSatEnabled: v }),
+  setLushSatDrive: (v) => set({ lushSatDrive: v }),
+  setLushSatMix: (v) => set({ lushSatMix: v }),
+  setLushFilterEnabled: (v) => set({ lushFilterEnabled: v }),
+  setLushFilterType: (v) => set({ lushFilterType: v }),
+  setLushFilterCutoff: (v) => set({ lushFilterCutoff: v }),
+  setLushFilterResonance: (v) => set({ lushFilterResonance: v }),
+  setLushFilterLfoEnabled: (v) => set({ lushFilterLfoEnabled: v }),
+  setLushFilterLfoRate: (v) => set({ lushFilterLfoRate: v }),
+  setLushFilterLfoDepth: (v) => set({ lushFilterLfoDepth: v }),
+  setLushChorusEnabled: (v) => set({ lushChorusEnabled: v }),
+  setLushChorusDelay: (v) => set({ lushChorusDelay: v }),
+  setLushChorusModDepth: (v) => set({ lushChorusModDepth: v }),
+  setLushChorusRate: (v) => set({ lushChorusRate: v }),
+  setLushChorusMix: (v) => set({ lushChorusMix: v }),
+  setLushBodyResEnabled: (v) => set({ lushBodyResEnabled: v }),
+  setLushBodyResGain: (v) => set({ lushBodyResGain: v }),
   setActivePanel: (v) => set({ activePanel: v }),
   setCurrentChordName: (v) => set({ currentChordName: v }),
   setTempoSyncEnabled: (v) => set({ tempoSyncEnabled: v }),

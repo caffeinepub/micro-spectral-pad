@@ -8,6 +8,8 @@ import {
   applyMutation,
   clearGrid,
   saveUndo,
+  setChordAllowedRows,
+  setHqBrushParams,
 } from "../../engines/brushEngine";
 import {
   canvasToCellCoords,
@@ -71,15 +73,19 @@ export default function SpectralCanvas() {
     progressionPreset,
     progressionStep,
     chordScale,
+    hqModeEnabled,
+    hqGaussianSmoothing,
+    hqBrushSoftness,
   } = useSynthStore();
 
-  // Initialize canvas
+  useEffect(() => {
+    setHqBrushParams(hqModeEnabled && hqGaussianSmoothing, hqBrushSoftness);
+  }, [hqModeEnabled, hqGaussianSmoothing, hqBrushSoftness]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
-
-    // Must init canvas (get 2D context) BEFORE resizing
     const w = container.clientWidth || 300;
     const h = container.clientHeight || 200;
     canvas.width = w;
@@ -87,34 +93,28 @@ export default function SpectralCanvas() {
     initCanvas(canvas);
     redrawAll();
     startRenderLoop();
-
     const resize = () => {
       const w2 = container.clientWidth;
       const h2 = container.clientHeight;
       if (w2 > 0 && h2 > 0) resizeCanvas(w2, h2);
     };
-
     const observer = new ResizeObserver(resize);
     observer.observe(container);
-
     return () => {
       stopRenderLoop();
       observer.disconnect();
     };
   }, []);
 
-  // Playhead animation
   useEffect(() => {
     const animatePlayhead = () => {
       playheadRafRef.current = requestAnimationFrame(animatePlayhead);
       const fraction = getPlayheadFraction();
-
       if (Math.abs(fraction - lastPlayheadRef.current) > 0.001 || isPlaying) {
         setPlayheadPosition(fraction, isPlaying);
         lastPlayheadRef.current = fraction;
       }
     };
-
     playheadRafRef.current = requestAnimationFrame(animatePlayhead);
     return () => {
       if (playheadRafRef.current) cancelAnimationFrame(playheadRafRef.current);
@@ -128,7 +128,6 @@ export default function SpectralCanvas() {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-
       if ("touches" in e) {
         const touch = e.touches[0] || e.changedTouches[0];
         if (!touch) return null;
@@ -145,67 +144,84 @@ export default function SpectralCanvas() {
     [],
   );
 
+  const computeAndSetChordRows = useCallback((): Set<number> => {
+    if (!chordModeEnabled) {
+      setChordAllowedRows(null);
+      return new Set();
+    }
+    let effectiveRoot = chordRoot;
+    if (progressionEnabled) {
+      const prog = PROGRESSIONS[progressionPreset] || [0, 3, 4, 0];
+      const scale = SCALE_INTERVALS[chordScale] || SCALE_INTERVALS.Major;
+      const rootMidi = ROOT_NOTES[chordRoot] || 60;
+      const ROOT_NOTE_NAMES = [
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+      ];
+      const degree = prog[progressionStep % prog.length] ?? 0;
+      const semitone = scale[degree % scale.length] ?? 0;
+      const noteIndex = (((rootMidi - 60 + semitone) % 12) + 12) % 12;
+      effectiveRoot = ROOT_NOTE_NAMES[noteIndex] ?? chordRoot;
+    }
+    const allowedRows = getChordRowsForGrid(
+      effectiveRoot,
+      chordOctave,
+      chordType,
+      chordInversion,
+      chordSpread,
+      chordVoiceCount,
+      chordVoiceStacking,
+      ROWS,
+    );
+    setChordAllowedRows(allowedRows.size > 0 ? allowedRows : null);
+    return allowedRows;
+  }, [
+    chordModeEnabled,
+    chordRoot,
+    chordOctave,
+    chordType,
+    chordInversion,
+    chordSpread,
+    chordVoiceCount,
+    chordVoiceStacking,
+    progressionEnabled,
+    progressionPreset,
+    progressionStep,
+    chordScale,
+  ]);
+
   const handlePaint = useCallback(
     (x: number, y: number, isMutateEnd = false) => {
       const coords = canvasToCellCoords(x, y);
       if (!coords) return;
       let { col, row } = coords;
 
-      // Chord lock: snap row to nearest allowed chord tone row
-      if (chordModeEnabled) {
-        // If progression is active, derive current step's root note
-        let effectiveRoot = chordRoot;
-        if (progressionEnabled) {
-          const prog = PROGRESSIONS[progressionPreset] || [0, 3, 4, 0];
-          const scale = SCALE_INTERVALS[chordScale] || SCALE_INTERVALS.Major;
-          const rootMidi = ROOT_NOTES[chordRoot] || 60;
-          const ROOT_NOTE_NAMES = [
-            "C",
-            "C#",
-            "D",
-            "D#",
-            "E",
-            "F",
-            "F#",
-            "G",
-            "G#",
-            "A",
-            "A#",
-            "B",
-          ];
-          const degree = prog[progressionStep % prog.length] ?? 0;
-          const semitone = scale[degree % scale.length] ?? 0;
-          const noteIndex = (((rootMidi - 60 + semitone) % 12) + 12) % 12;
-          effectiveRoot = ROOT_NOTE_NAMES[noteIndex] ?? chordRoot;
-        }
+      const allowedRows = computeAndSetChordRows();
 
-        const allowedRows = getChordRowsForGrid(
-          effectiveRoot,
-          chordOctave,
-          chordType,
-          chordInversion,
-          chordSpread,
-          chordVoiceCount,
-          chordVoiceStacking,
-          ROWS,
-        );
-
-        if (allowedRows.size > 0 && !allowedRows.has(row)) {
-          // Snap to nearest allowed row
-          let nearest = -1;
-          let minDist = Number.POSITIVE_INFINITY;
-          for (const r of allowedRows) {
-            const d = Math.abs(r - row);
-            if (d < minDist) {
-              minDist = d;
-              nearest = r;
-            }
+      // Snap row to nearest chord tone
+      if (chordModeEnabled && allowedRows.size > 0 && !allowedRows.has(row)) {
+        let nearest = -1;
+        let minDist = Number.POSITIVE_INFINITY;
+        for (const r of allowedRows) {
+          const d = Math.abs(r - row);
+          if (d < minDist) {
+            minDist = d;
+            nearest = r;
           }
-          if (nearest >= 0) row = nearest;
         }
+        if (nearest >= 0) row = nearest;
       }
 
-      // Skip if same cell (avoid redundant writes during slow drag)
       if (
         !isMutateEnd &&
         lastCellRef.current?.col === col &&
@@ -222,19 +238,46 @@ export default function SpectralCanvas() {
         return;
       }
 
-      applyBrush(
-        col,
-        row,
-        brushType,
-        brushSize,
-        brushIntensity,
-        brushHueNorm,
-        brushSaturation,
-        formantWidth,
-      );
+      // Chord mode + brushSize > 1: paint multiple chord tones based on brush size
+      if (chordModeEnabled && allowedRows.size > 0 && brushSize > 1) {
+        const sortedRows = Array.from(allowedRows).sort(
+          (a, b) => Math.abs(a - row) - Math.abs(b - row),
+        );
+        const numTones = Math.min(brushSize, sortedRows.length);
+        const selectedRows = new Set(sortedRows.slice(0, numTones));
+        // Temporarily narrow chord lock to selected rows so all applyBrush calls write correctly
+        setChordAllowedRows(selectedRows);
+        for (const r of selectedRows) {
+          applyBrush(
+            col,
+            r,
+            brushType,
+            brushSize,
+            brushIntensity,
+            brushHueNorm,
+            brushSaturation,
+            formantWidth,
+          );
+        }
+        // Restore full chord lock
+        setChordAllowedRows(allowedRows);
+      } else {
+        applyBrush(
+          col,
+          row,
+          brushType,
+          brushSize,
+          brushIntensity,
+          brushHueNorm,
+          brushSaturation,
+          formantWidth,
+        );
+      }
+
       scheduleRebuild();
     },
     [
+      computeAndSetChordRows,
       brushType,
       brushSize,
       brushIntensity,
@@ -245,17 +288,6 @@ export default function SpectralCanvas() {
       mutationType,
       mutateStrength,
       chordModeEnabled,
-      chordRoot,
-      chordOctave,
-      chordType,
-      chordInversion,
-      chordSpread,
-      chordVoiceCount,
-      chordVoiceStacking,
-      progressionEnabled,
-      progressionPreset,
-      progressionStep,
-      chordScale,
     ],
   );
 
@@ -264,12 +296,10 @@ export default function SpectralCanvas() {
       isPaintingRef.current = true;
       lastCellRef.current = null;
       undoSavedThisStroke.current = false;
-
       if (!mutateMode && !undoSavedThisStroke.current) {
         saveUndo();
         undoSavedThisStroke.current = true;
       }
-
       handlePaint(x, y);
     },
     [handlePaint, mutateMode],
@@ -287,18 +317,14 @@ export default function SpectralCanvas() {
     (x: number, y: number) => {
       if (!isPaintingRef.current) return;
       isPaintingRef.current = false;
-
-      if (mutateMode) {
-        handlePaint(x, y, true);
-      }
-
+      if (mutateMode) handlePaint(x, y, true);
+      if (!chordModeEnabled) setChordAllowedRows(null);
       scheduleRebuild();
       lastCellRef.current = null;
     },
-    [handlePaint, mutateMode],
+    [handlePaint, mutateMode, chordModeEnabled],
   );
 
-  // Touch handlers
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
       e.preventDefault();
@@ -326,7 +352,6 @@ export default function SpectralCanvas() {
     [getCanvasCoords, handlePointerEnd],
   );
 
-  // Mouse handlers (fallback)
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       const canvas = canvasRef.current;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import BottomToolbar from "./components/synth/BottomToolbar";
 import BrushPopup from "./components/synth/BrushPopup";
 import ChordPanel from "./components/synth/ChordPanel";
+import LushPanel from "./components/synth/LushPanel";
 import MacroPanel from "./components/synth/MacroPanel";
 import ModulesPanel from "./components/synth/ModulesPanel";
 import SettingsMenu from "./components/synth/SettingsMenu";
@@ -19,10 +20,9 @@ let audioInited = false;
 let lastDriftTime = performance.now();
 
 export default function App() {
-  const { activePanel, setActivePanel } = useSynthStore();
+  const { activePanel, setActivePanel, lushModeEnabled } = useSynthStore();
   const rafRef = useRef<number>(0);
 
-  // Initialize audio on first user gesture
   const handleFirstTouch = useCallback(async () => {
     if (audioInited) return;
     audioInited = true;
@@ -32,20 +32,15 @@ export default function App() {
     syncParamsImmediately();
   }, []);
 
-  // RAF loop for drift LFO and CPU meter
   useEffect(() => {
     let lastTime = performance.now();
-
     const tick = (now: number) => {
       rafRef.current = requestAnimationFrame(tick);
       const delta = now - lastTime;
       lastTime = now;
-
-      // Update drift LFO (not in audio callback)
       updateDriftLFO(delta);
       lastDriftTime = now;
     };
-
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -81,6 +76,29 @@ export default function App() {
           minHeight: 0,
         }}
       >
+        {/* Lush Engine Active indicator */}
+        {lushModeEnabled && (
+          <div
+            style={{
+              position: "absolute",
+              top: "4px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 10,
+              pointerEvents: "none",
+              background: "#a855f722",
+              border: "1px solid #a855f755",
+              borderRadius: "3px",
+              padding: "2px 8px",
+              fontSize: "8px",
+              letterSpacing: "0.1em",
+              color: "#a855f7",
+              fontWeight: "bold",
+            }}
+          >
+            LUSH ENGINE ACTIVE
+          </div>
+        )}
         <SpectralCanvas />
       </div>
 
@@ -153,8 +171,8 @@ export default function App() {
           <SettingsMenu onClose={closePanel} />
         </>
       )}
+      {activePanel === "lush" && <LushPanel onClose={closePanel} />}
 
-      {/* Footer */}
       <div
         style={{
           textAlign: "center",
